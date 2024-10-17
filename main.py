@@ -1,68 +1,41 @@
 import cv2
-import csv
 import numpy as np
 from ultralytics import YOLO
 from preprocess import preprocess_frame, load_calibration_data, rescale_coordinates
+from utils import draw_annotations
+from config import VIDEO_PATH, RECOGNITION_SIZE, DISPLAY_SIZE
+from data_export import CSVExporter
 
-def draw_annotations(image, boxes, keypoints, track_ids):
-    for box, kps, track_id in zip(boxes, keypoints, track_ids):
-        x, y, w, h = box
-        # Draw bounding box
-        cv2.rectangle(image, (int(x - w/2), int(y - h/2)), (int(x + w/2), int(y + h/2)), (0, 255, 0), 2)
-        
-        # Draw track ID
-        cv2.putText(image, f"ID: {track_id}", (int(x - w/2), int(y - h/2 - 10)), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        
-        # Draw keypoints
-        for kp in kps:
-            kp_x, kp_y, kp_conf = kp
-            if kp_conf > 0:
-                cv2.circle(image, (int(kp_x), int(kp_y)), 5, (255, 0, 0), -1)
-    
-    return image
+def main():
+    # Load the YOLOv8 model
+    model = YOLO("best.pt")
 
-# Load the YOLOv8 model
-model = YOLO("best.pt")
+    # Load calibration data
+    K, D, DIM = load_calibration_data()
+    if K is None or D is None or DIM is None:
+        print("Failed to load calibration data. Exiting.")
+        return
 
-# Load calibration data
-K, D, DIM = load_calibration_data()
-if K is None or D is None or DIM is None:
-    print("Failed to load calibration data. Exiting.")
-    exit(1)
+    # Open the video file
+    cap = cv2.VideoCapture(VIDEO_PATH)
 
-# Open the video file
-video_path = "video_2.mp4"
-cap = cv2.VideoCapture(video_path)
+    # Prepare CSV file for tracking data
+    csv_exporter = CSVExporter('tracking_data.csv')
 
-# Define the frame sizes
-recognition_size = (640, 640)
-display_size = (1280, 720)  # Adjust this to your preferred display size
+    frame_count = 0
 
-# Prepare CSV file for tracking data
-csv_file = open('tracking_data.csv', 'w', newline='')
-csv_writer = csv.writer(csv_file)
+    # Main loop
+    while cap.isOpened():
+        success, frame = cap.read()
+        if not success:
+            break
 
-# Prepare the header row for CSV
-header = ['frame', 'id', 'x', 'y', 'width', 'height']
-for i in range(10):  # 10 keypoints
-    header.extend([f'kp{i}_x', f'kp{i}_y', f'kp{i}_conf'])
-csv_writer.writerow(header)
-
-frame_count = 0
-
-# Loop through the video frames
-while cap.isOpened():
-    # Read a frame from the video
-    success, frame = cap.read()
-
-    if success:
         frame_count += 1
         
-        # Preprocess the frame (undistort and resize)
-        recognition_frame, display_frame = preprocess_frame(frame, K, D, DIM, recognition_size, display_size)
+        # Preprocess the frame
+        recognition_frame, display_frame = preprocess_frame(frame, K, D, DIM, RECOGNITION_SIZE, DISPLAY_SIZE)
 
-        # Run YOLOv8 tracking on the frame, persisting tracks between frames
+        # Run YOLOv8 tracking
         results = model.track(recognition_frame, persist=True)
 
         if results[0].boxes.id is not None:
@@ -75,7 +48,7 @@ while cap.isOpened():
             scaled_keypoints = []
 
             for box, kps in zip(boxes, keypoints):
-                scaled_box = rescale_coordinates(box.tolist(), recognition_size, display_size)
+                scaled_box = rescale_coordinates(box.tolist(), RECOGNITION_SIZE, DISPLAY_SIZE)
                 scaled_boxes.append(scaled_box)
 
                 scaled_kps = []
@@ -83,7 +56,7 @@ while cap.isOpened():
                     if len(kp) == 3:
                         kp_x, kp_y, kp_conf = kp
                         if kp_conf > 0:
-                            kp_x, kp_y = rescale_coordinates([kp_x, kp_y], recognition_size, display_size)
+                            kp_x, kp_y = rescale_coordinates([kp_x, kp_y], RECOGNITION_SIZE, DISPLAY_SIZE)
                         else:
                             kp_x, kp_y = 0, 0
                     else:
@@ -97,9 +70,9 @@ while cap.isOpened():
                 row = [frame_count, track_id, x, y, w, h]
                 for kp in kps:
                     row.extend(kp)
-                csv_writer.writerow(row)
+                csv_exporter.write_row(row)
 
-            # Draw annotations on the display frame
+            # Draw annotations
             annotated_frame = draw_annotations(display_frame.copy(), scaled_boxes, scaled_keypoints, track_ids)
         else:
             annotated_frame = display_frame
@@ -107,14 +80,13 @@ while cap.isOpened():
         # Display the annotated frame
         cv2.imshow("YOLOv8 Tracking", annotated_frame)
 
-        # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
-    else:
-        # Break the loop if the end of the video is reached
-        break
 
-# Release the video capture object and close the display window
-cap.release()
-cv2.destroyAllWindows()
-csv_file.close()
+    # Cleanup
+    cap.release()
+    cv2.destroyAllWindows()
+    csv_exporter.close()
+
+if __name__ == "__main__":
+    main()
