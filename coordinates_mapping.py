@@ -7,7 +7,7 @@ import json
 image = None
 points = []
 real_world_coords = []
-display_size = (1280, 720)  # You can adjust this
+display_size = (1920, 1080)  # You can adjust this
 
 def click_event(event, x, y, flags, param):
     global image, points
@@ -36,7 +36,7 @@ def main():
     global image
 
     # Load the first frame from the video
-    video = cv2.VideoCapture("video.mp4")
+    video = cv2.VideoCapture("video_2.mp4")
     ret, frame = video.read()
     video.release()
 

@@ -1,10 +1,12 @@
 import cv2
-import numpy as np
+import time
 from ultralytics import YOLO
 from preprocess import preprocess_frame, load_calibration_data, rescale_coordinates
-from utils import draw_annotations
-from config import VIDEO_PATH, RECOGNITION_SIZE, DISPLAY_SIZE
+from config import VIDEO_PATH, RECOGNITION_SIZE, DISPLAY_SIZE, MAPPING_FILE
 from data_export import CSVExporter
+from coordinate_transformer import CoordinateTransformer, calculate_real_world_coordinates
+from speed_utils import SpeedTracker
+from visualization_utils import draw_annotations
 
 def main():
     # Load the YOLOv8 model
@@ -16,13 +18,24 @@ def main():
         print("Failed to load calibration data. Exiting.")
         return
 
+    # Initialize coordinate transformer and speed tracker
+    transformer = CoordinateTransformer(MAPPING_FILE)
+    speed_tracker = SpeedTracker()
+
     # Open the video file
     cap = cv2.VideoCapture(VIDEO_PATH)
 
-    # Prepare CSV file for tracking data
-    csv_exporter = CSVExporter('tracking_data.csv')
+    # Prepare CSV files for tracking data and real-world coordinates
+    tracking_header = ['frame', 'id', 'x', 'y', 'width', 'height']
+    for i in range(10):  # 10 keypoints
+        tracking_header.extend([f'kp{i}_x', f'kp{i}_y', f'kp{i}_conf'])
+    tracking_exporter = CSVExporter('tracking_data.csv', tracking_header)
+
+    world_coord_header = ['frame', 'id', 'world_x', 'world_y', 'speed_kmh']
+    world_coord_exporter = CSVExporter('world_coordinates.csv', world_coord_header)
 
     frame_count = 0
+    last_time = time.time()
 
     # Main loop
     while cap.isOpened():
@@ -31,6 +44,9 @@ def main():
             break
 
         frame_count += 1
+        current_time = time.time()
+        time_diff = current_time - last_time
+        last_time = current_time
         
         # Preprocess the frame
         recognition_frame, display_frame = preprocess_frame(frame, K, D, DIM, RECOGNITION_SIZE, DISPLAY_SIZE)
@@ -44,36 +60,26 @@ def main():
             keypoints = results[0].keypoints.data.cpu().numpy()
 
             # Rescale boxes and keypoints to display size
-            scaled_boxes = []
-            scaled_keypoints = []
+            scaled_boxes = [rescale_coordinates(box.tolist(), RECOGNITION_SIZE, DISPLAY_SIZE) for box in boxes]
+            scaled_keypoints = [[rescale_coordinates(kp[:2], RECOGNITION_SIZE, DISPLAY_SIZE) + [kp[2]] if len(kp) == 3 and kp[2] > 0 else [0, 0, 0] for kp in obj_kps] for obj_kps in keypoints]
 
-            for box, kps in zip(boxes, keypoints):
-                scaled_box = rescale_coordinates(box.tolist(), RECOGNITION_SIZE, DISPLAY_SIZE)
-                scaled_boxes.append(scaled_box)
+            # Calculate real-world coordinates
+            real_world_coords = calculate_real_world_coordinates(scaled_boxes, transformer)
 
-                scaled_kps = []
-                for kp in kps:
-                    if len(kp) == 3:
-                        kp_x, kp_y, kp_conf = kp
-                        if kp_conf > 0:
-                            kp_x, kp_y = rescale_coordinates([kp_x, kp_y], RECOGNITION_SIZE, DISPLAY_SIZE)
-                        else:
-                            kp_x, kp_y = 0, 0
-                    else:
-                        kp_x, kp_y, kp_conf = 0, 0, 0
-                    scaled_kps.append([kp_x, kp_y, kp_conf])
-                scaled_keypoints.append(scaled_kps)
+            # Calculate speeds
+            speeds = speed_tracker.get_speeds(track_ids, real_world_coords, time_diff)
 
             # Write tracking data to CSV
             for box, track_id, kps in zip(scaled_boxes, track_ids, scaled_keypoints):
-                x, y, w, h = box
-                row = [frame_count, track_id, x, y, w, h]
-                for kp in kps:
-                    row.extend(kp)
-                csv_exporter.write_row(row)
+                row = [frame_count, track_id] + box + [item for kp in kps for item in kp]
+                tracking_exporter.write_row(row)
 
-            # Draw annotations
-            annotated_frame = draw_annotations(display_frame.copy(), scaled_boxes, scaled_keypoints, track_ids)
+            # Write real-world coordinates and speeds to CSV
+            for track_id, world_coord, speed in zip(track_ids, real_world_coords, speeds):
+                world_coord_exporter.write_row([frame_count, track_id] + list(world_coord) + [speed])
+
+            # Draw annotations with speeds
+            annotated_frame = draw_annotations(display_frame.copy(), scaled_boxes, scaled_keypoints, track_ids, speeds)
         else:
             annotated_frame = display_frame
 
@@ -86,7 +92,8 @@ def main():
     # Cleanup
     cap.release()
     cv2.destroyAllWindows()
-    csv_exporter.close()
+    tracking_exporter.close()
+    world_coord_exporter.close()
 
 if __name__ == "__main__":
     main()
