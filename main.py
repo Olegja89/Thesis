@@ -1,5 +1,4 @@
 import cv2
-import time
 from ultralytics import YOLO
 from preprocess import preprocess_frame, load_calibration_data, rescale_coordinates
 from config import VIDEO_PATH, RECOGNITION_SIZE, DISPLAY_SIZE, MAPPING_FILE
@@ -25,6 +24,12 @@ def main():
     # Open the video file
     cap = cv2.VideoCapture(VIDEO_PATH)
 
+    # Get video FPS
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0:
+        print(f"Warning: Invalid FPS ({fps}), defaulting to 30")
+        fps = 30.0
+
     # Prepare CSV files for tracking data and real-world coordinates
     tracking_header = ['frame', 'id', 'x', 'y', 'width', 'height']
     for i in range(10):  # 10 keypoints
@@ -35,7 +40,6 @@ def main():
     world_coord_exporter = CSVExporter('world_coordinates.csv', world_coord_header)
 
     frame_count = 0
-    last_time = time.time()
 
     # Main loop
     while cap.isOpened():
@@ -44,9 +48,6 @@ def main():
             break
 
         frame_count += 1
-        current_time = time.time()
-        time_diff = current_time - last_time
-        last_time = current_time
         
         # Preprocess the frame
         recognition_frame, display_frame = preprocess_frame(frame, K, D, DIM, RECOGNITION_SIZE, DISPLAY_SIZE)
@@ -61,13 +62,15 @@ def main():
 
             # Rescale boxes and keypoints to display size
             scaled_boxes = [rescale_coordinates(box.tolist(), RECOGNITION_SIZE, DISPLAY_SIZE) for box in boxes]
-            scaled_keypoints = [[rescale_coordinates(kp[:2], RECOGNITION_SIZE, DISPLAY_SIZE) + [kp[2]] if len(kp) == 3 and kp[2] > 0 else [0, 0, 0] for kp in obj_kps] for obj_kps in keypoints]
+            scaled_keypoints = [[rescale_coordinates(kp[:2], RECOGNITION_SIZE, DISPLAY_SIZE) + [kp[2]] 
+                               if len(kp) == 3 and kp[2] > 0 else [0, 0, 0] 
+                               for kp in obj_kps] for obj_kps in keypoints]
 
             # Calculate real-world coordinates
             real_world_coords = calculate_real_world_coordinates(scaled_boxes, transformer)
 
-            # Calculate speeds
-            speeds = speed_tracker.get_speeds(track_ids, real_world_coords, time_diff)
+            # Calculate speeds using frame count and fps
+            speeds = speed_tracker.get_speeds(track_ids, real_world_coords, frame_count, fps)
 
             # Write tracking data to CSV
             for box, track_id, kps in zip(scaled_boxes, track_ids, scaled_keypoints):
