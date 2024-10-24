@@ -108,23 +108,6 @@ Follow the prompts to:
 - `world_coordinates.csv`: Contains real-world coordinates and speed data
 - `coordinate_mapping.json`: Stores the coordinate transformation data
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- The YOLOv8 team for the object detection model
-- OpenCV community for computer vision tools
-- Your valuable contributions and feedback
 
 ## Contact
 
