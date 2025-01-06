@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from preprocess import preprocess_frame, load_calibration_data
 import json
+from config import VIDEO_PATH, RECOGNITION_SIZE, DISPLAY_SIZE, MAPPING_FILE
 
 # Global variables
 image = None
@@ -36,7 +37,7 @@ def main():
     global image
 
     # Load the first frame from the video
-    video = cv2.VideoCapture("video_2.mp4")
+    video = cv2.VideoCapture(VIDEO_PATH)
     ret, frame = video.read()
     video.release()
 
@@ -49,7 +50,6 @@ def main():
     if K is None or D is None or DIM is None:
         print("Failed to load calibration data. Exiting.")
         return
-
     # Preprocess the frame
     recognition_frame, _ = preprocess_frame(frame, K, D, DIM)
     

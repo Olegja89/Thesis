@@ -34,7 +34,7 @@ def rescale_coordinates(coords, from_size, to_size):
     return [coord * fx if i % 2 == 0 else coord * fy for i, coord in enumerate(coords)]
 
 # Load calibration data
-def load_calibration_data(file_path='gopro_calibration.npz'):
+def load_calibration_data(file_path='gopro_calibration_fisheye.npz'):
     try:
         with np.load(file_path) as X:
             K, D, DIM = [X[i] for i in ('K', 'D', 'DIM')]
