@@ -10,7 +10,8 @@ from visualization_utils import draw_annotations
 def main():
     # Load the YOLOv8 model
     model = YOLO("best.pt")
-
+    # model.to("cuda")
+    print(f"Using device: {model.device}")
     # Load calibration data
     K, D, DIM = load_calibration_data()
     if K is None or D is None or DIM is None:
