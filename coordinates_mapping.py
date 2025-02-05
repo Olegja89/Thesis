@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import json
+from config import VIDEO_PATH, RECOGNITION_SIZE, DISPLAY_SIZE, MAPPING_FILE
 
 # Optional preprocessing dependencies
 USE_PREPROCESSING = True  # Set to False to disable preprocessing
