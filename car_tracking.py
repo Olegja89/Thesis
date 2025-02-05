@@ -39,14 +39,16 @@ def remove_outliers(records, std_threshold=2.0):
     ys = [r['real_world_y'] for r in records]
 
     mean_x, mean_y = mean(xs), mean(ys)
-    std_x, std_y = stdev(xs) if len(xs) > 1 else 0, stdev(ys) if len(ys) > 1 else 0
+    # If there's only one record, stdev() would fail; handle gracefully:
+    std_x = stdev(xs) if len(xs) > 1 else 0
+    std_y = stdev(ys) if len(ys) > 1 else 0
 
     filtered = []
     for r in records:
         x, y = r['real_world_x'], r['real_world_y']
-        # Keep record if within the threshold
+        # Keep record if within the threshold or if stdev is zero
         if std_x == 0 and std_y == 0:
-            # Means all points are identical or only one point
+            # Means all points are identical or there's only one point
             filtered.append(r)
         else:
             if (abs(x - mean_x) <= std_threshold * std_x) and \
@@ -60,38 +62,38 @@ def select_best_frames(records, desired_count=10):
     Select the best (most 'spread') frames if the user wants a certain number of frames.
     We'll illustrate a simple approach:
     1. Sort all frames by real_world_x (ascending).
-    2. Then pick the frames that maximize coverage across that axis.
-    (You could also consider real_world_y or 2D distances or other heuristics.)
+    2. Then pick frames that maximize coverage across that axis.
     :param records: list of dict with real_world_x, real_world_y, etc.
     :param desired_count: how many frames to pick
     """
     if desired_count <= 0 or len(records) <= desired_count:
-        return records  # If the request is 0 or the dataset is small, return everything
+        return records  # If the request is 0 or dataset is small, return everything
     
     # Sort by X coordinate
     sorted_records = sorted(records, key=lambda r: r['real_world_x'])
 
-    # A simplistic approach: pick frames equidistantly in the sorted list
-    # so we get the "biggest differences" along X. If we want the largest coverage,
-    # we take the min X and max X for sure, then fill in between.
+    # A simple approach: pick frames equidistantly in the sorted list
+    # so we get coverage along X.
     picked = []
     n = len(sorted_records)
     step = n / (desired_count - 1)  # We'll pick first, last, and so on
+
     for i in range(desired_count):
         index = int(round(i * step))
         if index >= n:
             index = n - 1
         picked.append(sorted_records[index])
+
     # Convert to set to avoid duplicates, then back to list
     picked = list({p['frame']: p for p in picked}.values())
-    # Sort final pick by frame or real_world_x
+    # Sort final picks by frame (or by x, if you prefer)
     picked.sort(key=lambda r: r['frame'])
 
     return picked
 
 def main():
-    tracking_csv = 'tracking_data.csv'
-    mapping_json = 'coordinate_mapping.json'
+    tracking_csv = 'tracking_data.csv'       # CSV now contains columns: frame,id,x,y,width,real_width
+    mapping_json = 'coordinate_mapping.json' # Homography data
 
     # Load homography
     H = load_transformation_data(mapping_json)
@@ -101,16 +103,17 @@ def main():
     with open(tracking_csv, 'r', newline='') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            # Convert numeric fields to floats/ints as needed
+            # Convert numeric fields
             row['frame'] = int(row['frame'])
             row['id'] = int(row['id'])
             row['x'] = float(row['x'])
             row['y'] = float(row['y'])
             row['width'] = float(row['width'])
-            row['height'] = float(row['height'])
+            # CHANGED: read 'real_width' instead of 'height'
+            row['real_width'] = float(row['real_width'])
             records.append(row)
 
-    # Wait for user inputs - car id and desired frame count
+    # Ask user for car id
     car_id_str = input("Enter car id: ")
     try:
         car_id = int(car_id_str)
@@ -118,7 +121,7 @@ def main():
         print("Invalid car ID entered. Exiting.")
         return
 
-    # Optional: let user pick how many frames they want
+    # Ask for desired frame count
     desired_count_str = input("Enter desired number of frames (0 for all, default=0): ")
     try:
         desired_count = int(desired_count_str) if desired_count_str.strip() else 0
@@ -127,21 +130,21 @@ def main():
 
     # Filter records for the chosen car_id
     car_records = [r for r in records if r['id'] == car_id]
-
     if not car_records:
         print(f"No records found for car id {car_id}.")
         return
 
-    # Compute bottom-center in image coords & real-world transform
+    # Compute real-world coordinates for the center (x, y)
     transformed_records = []
     for r in car_records:
         frame = r['frame']
-        cx = r['x'] + r['width'] / 2.0
-        cy = r['y'] + r['height']
+        # CHANGED: No longer use bounding-box height. 
+        # We assume x,y is already the bounding box center in the new CSV.
+        cx = r['x']
+        cy = r['y']
 
         # Apply homography
         rwx, rwy = apply_homography(cx, cy, H)
-        # If transformation failed, skip
         if rwx is None or rwy is None:
             continue
 
@@ -151,7 +154,8 @@ def main():
             'real_world_x': rwx,
             'real_world_y': rwy,
             'width': r['width'],
-            'height': r['height']
+            # Use the real_width from the CSV
+            'real_width': r['real_width']
         })
 
     # Remove outliers
@@ -159,17 +163,17 @@ def main():
 
     # If the user asked for a certain # of frames, select them
     final_records = select_best_frames(cleaned_records, desired_count=desired_count)
-
     if not final_records:
         print("No records remain after filtering or selection.")
         return
 
     # Prepare output CSV
-    header = ['frame', 'id', 'real_world_x', 'real_world_y', 'width', 'height']
+    # CHANGED: now we export 'width' and 'real_width' (instead of 'height')
+    header = ['frame', 'id', 'real_world_x', 'real_world_y', 'width', 'real_width']
     output_filename = f"car_{car_id}_transformed.csv"
     exporter = CSVExporter(output_filename, header)
 
-    # Sort final records by frame before output (or keep whatever order you prefer)
+    # Sort final records by frame before output
     final_records.sort(key=lambda x: x['frame'])
 
     for r in final_records:
@@ -179,7 +183,7 @@ def main():
             r['real_world_x'],
             r['real_world_y'],
             r['width'],
-            r['height']
+            r['real_width']
         ])
 
     exporter.close()

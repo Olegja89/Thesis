@@ -52,8 +52,8 @@ def main():
     transformed_points = []
     
     for i, (label, point) in enumerate(points):
-        if i == origin_index or i == dir_index:
-            continue  # Skip selected reference points
+        #if i == origin_index or i == dir_index:
+            #continue  # Skip selected reference points
         
         new_coords = transform_point(point, origin, road_unit, perp_vector)
         transformed_points.append((label, new_coords))

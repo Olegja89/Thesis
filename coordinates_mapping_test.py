@@ -8,7 +8,7 @@ if USE_PREPROCESSING:
     from preprocess import preprocess_frame, load_calibration_data
 
 # Configuration
-IMAGE_PATH = "car.png"
+IMAGE_PATH = "30kmph_mapping.png"
 DISPLAY_SIZE = (1920, 1080)
 
 def load_homography(json_path="coordinate_mapping.json"):

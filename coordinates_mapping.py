@@ -8,7 +8,7 @@ if USE_PREPROCESSING:
     from preprocess import preprocess_frame, load_calibration_data
 
 # Configuration
-IMAGE_PATH = "mapping.png"  # Update with your actual image path
+IMAGE_PATH = "30kmph_mapping.png"  # Update with your actual image path
 DISPLAY_SIZE = (1920, 1080)  # Adjust as desired
 
 # Global variables

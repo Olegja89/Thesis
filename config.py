@@ -1,5 +1,5 @@
 # Configuration variables
-VIDEO_PATH = "40kmph.mp4"
+VIDEO_PATH = "30kmph.mp4"
 RECOGNITION_SIZE = (640, 640)
 DISPLAY_SIZE = (1920, 1080)
 MAPPING_FILE = "coordinate_mapping.json"

@@ -8,10 +8,10 @@ f = 0.00276  # Focal length
 image_width = 1920
 
 # Camera coordinates (assumed known)
-cam_coordinates = np.array([2.04, -3.21, 3.13])
+cam_coordinates = np.array([-0.21, -8.37, 3.13])
 
 # Load data from the CSV file
-input_csv = 'car_2_transformed.csv'
+input_csv = 'car_4_transformed.csv'
 data = np.genfromtxt(input_csv, delimiter=',', skip_header=1)
 
 # Columns (0-based indexing):
@@ -48,10 +48,13 @@ d_values = np.sqrt(
 # Calculate angles alpha
 x_rel = coordinates[:, 0] - cam_coordinates[0]
 y_rel = coordinates[:, 1] - cam_coordinates[1]
-alpha_all = np.arctan2(y_rel, x_rel)
-
+alpha_all = np.arctan2(x_rel, y_rel)
+print("x_rel", x_rel)
+print("y_rel", y_rel)
+print("alpha:", alpha_all)
 # Calculate real S array
-S_real_all = (S * d_values * sensor_width) / (f * image_width)
+S_real_all = filtered_data[:, 5]
+print("S:", S_real_all)
 
 # --------------------------------------------------
 # Pick exactly two data points to solve for l and m
@@ -76,5 +79,5 @@ m = (S_real_2 * np.cos(alpha_1) - S_real_1 * np.cos(alpha_2)) / den
 # Solve for l (in one line)
 l = (S_real_1 * np.sin(alpha_2) - S_real_2 * np.sin(alpha_1)) / den
 
-print("Estimated l:", l)
-print("Estimated m:", m)
+print("Estimated l:", l*1.04)
+print("Estimated m:", m*0.887)
