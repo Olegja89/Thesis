@@ -69,8 +69,8 @@ pip install -r requirements.txt
    - Calibration file path
 
 ## Usage
-
-### 1. Set up coordinate mapping
+### 1. Calibrate the camera with GoPro_fisheye_calibration.py to get .npz file
+### 2. Set up coordinate mapping
 
 Run the coordinate mapping script to establish real-world coordinates:
 ```bash
@@ -78,7 +78,7 @@ python src/coordinate_mapping.py
 ```
 Follow the on-screen instructions to select points and enter their real-world coordinates.
 
-### 2. Run the main tracking script
+### 3. Run the main tracking script
 
 Execute the main tracking script:
 ```bash
@@ -88,28 +88,15 @@ This will:
 - Process the input video
 - Track vehicles
 - Calculate speeds
-- Export tracking data to CSV files
+- Export tracking data to tracking_data.csv
 - Display real-time visualization
 
-### 3. Analyze speed data
+### 4. Analyze the data
+Run car_tracking.py, it will use tracking_data.csv as input.
+It will ask you to write a number of a vehicle of interest. The numbers are visible during the run of main.py.
+When it asks for the number of frames, press enter to export all available frames.
+It will export file named "car_###_transformed.csv" where ### is car number.
 
-Run the speed analysis script to visualize speed patterns:
-```bash
-python src/speed_analysis.py
-```
-Follow the prompts to:
-- Plot speed graphs for specific vehicles
-- View vehicle trajectories
-- Analyze speed patterns
+### 5. Estimate the car size
+Run calculation_model_2points.py to estimate the size of the car. Replace the name of the .csv file in the script.
 
-## Output Files
-
-- `tracking_data.csv`: Contains frame-by-frame tracking data including positions and keypoints
-- `world_coordinates.csv`: Contains real-world coordinates and speed data
-- `coordinate_mapping.json`: Stores the coordinate transformation data
-
-
-## Contact
-
-Your Name - your.email@example.com
-Project Link: [https://github.com/your-username/vehicle-tracking-project](https://github.com/your-username/vehicle-tracking-project)
