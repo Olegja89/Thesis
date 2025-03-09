@@ -1,3 +1,4 @@
+#this script is used to test the accuracy of coordinate mapping
 import cv2
 import numpy as np
 import json
@@ -85,7 +86,7 @@ def main():
     display_img = cv2.resize(frame, DISPLAY_SIZE, interpolation=cv2.INTER_AREA)
     
     # 2) Load the homography (image->world)
-    H_img_to_world = load_homography("coordinate_mapping.json")
+    H_img_to_world = load_homography("coordinate_mapping_2030.json")
     
     # If your matrix is actually world->image, invert it:
     # H_img_to_world = np.linalg.inv(H_world_to_img)  

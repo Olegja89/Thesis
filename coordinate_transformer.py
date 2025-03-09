@@ -1,3 +1,10 @@
+# coordinate_transformer.py  
+# This module converts image coordinates to real-world coordinates using a homography matrix.  
+# It includes:  
+# - CoordinateTransformer: Loads transformation matrix from JSON and applies it.  
+# - calculate_real_world_coordinates: Computes real-world positions of bounding boxes.  
+# - calculate_real_box_width: Estimates real-world object width from bounding box corners.  
+# - test_transformation: Verifies transformation accuracy using predefined points (when you run the script itself)
 import json
 import numpy as np
 import cv2
@@ -29,8 +36,8 @@ def calculate_real_world_coordinates(boxes, transformer):
     real_world_coords = []
     for box in boxes:
         x, y, w, h = box
-        # Calculate the middle-bottom point of the box
-        image_point = [x, y + h/2]
+        # Calculate the tracking point of the box (right now it's middle by X, and 1/4 from the bottom by Y axes)
+        image_point = [x, y + h/4]
         # Transform to real-world coordinates
         world_point = transformer.image_to_world(image_point)
         real_world_coords.append(world_point)

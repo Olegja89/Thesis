@@ -1,3 +1,7 @@
+#This script facilitates coordinate mapping between image and real-world space using homography.
+#It allows users to click on points in an image and manually input their corresponding real-world coordinates. 
+#The script then computes a homography transformation matrix using RANSAC for robustness and saves it to a JSON file (coordinate_mapping.json). 
+
 import cv2
 import numpy as np
 import json
@@ -9,7 +13,7 @@ if USE_PREPROCESSING:
     from preprocess import preprocess_frame, load_calibration_data
 
 # Configuration
-IMAGE_PATH = "30kmph_mapping.png"  # Update with your actual image path
+IMAGE_PATH = "mapping.png"  # Update with your actual image path
 DISPLAY_SIZE = (1920, 1080)  # Adjust as desired
 
 # Global variables

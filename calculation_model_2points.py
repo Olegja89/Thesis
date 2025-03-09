@@ -1,3 +1,4 @@
+#calculates vehicle size based on 2 points. As input it takes a .csv file exported by car_tracking.py. This script works with exactly 2 points, so it takes first 2 points from .csv file.
 import numpy as np
 import csv
 
@@ -7,11 +8,11 @@ sensor_width = 0.00617
 f = 0.00276  # Focal length
 image_width = 1920
 
-# Camera coordinates (assumed known)
+# Camera coordinates (first for 40-50kmph, second for 20-30kmph videos)
 cam_coordinates = np.array([-0.21, -8.37, 3.13])
-
+#cam_coordinates = np.array([2.04, -3.21, 3.13]) 
 # Load data from the CSV file
-input_csv = 'car_4_transformed.csv'
+input_csv = 'car_2_transformed.csv'
 data = np.genfromtxt(input_csv, delimiter=',', skip_header=1)
 
 # Columns (0-based indexing):
@@ -79,5 +80,5 @@ m = (S_real_2 * np.cos(alpha_1) - S_real_1 * np.cos(alpha_2)) / den
 # Solve for l (in one line)
 l = (S_real_1 * np.sin(alpha_2) - S_real_2 * np.sin(alpha_1)) / den
 
-print("Estimated l:", l*1.04)
-print("Estimated m:", m*0.887)
+print("Estimated l:", l)
+print("Estimated m:", m)

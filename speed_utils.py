@@ -1,9 +1,9 @@
-# speed_utils.py
+# functions used to calculate the speed
 import numpy as np
 from collections import deque
 
 class SpeedTracker:
-    def __init__(self, buffer_size=5):
+    def __init__(self, buffer_size=10):
         self.trackers = {}
         self.buffer_size = buffer_size
 

@@ -1,6 +1,8 @@
+#this script takes as input the .csv file with all the tracked vehicles, and outputs the data about one particular vehicle that can be later analysed.
 import csv
 import json
 import math
+from config import MAPPING_FILE
 from statistics import mean, stdev
 from data_export import CSVExporter
 
@@ -93,7 +95,7 @@ def select_best_frames(records, desired_count=10):
 
 def main():
     tracking_csv = 'tracking_data.csv'       # CSV now contains columns: frame,id,x,y,width,real_width
-    mapping_json = 'coordinate_mapping.json' # Homography data
+    mapping_json = MAPPING_FILE # Homography data
 
     # Load homography
     H = load_transformation_data(mapping_json)

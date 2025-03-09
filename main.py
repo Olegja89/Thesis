@@ -15,7 +15,7 @@ from visualization_utils import draw_annotations
 def main():
     # Load the YOLOv8 model
     model = YOLO("best.pt")
-    # model.to("cuda")
+    model.to("cuda")
     print(f"Using device: {model.device}")
     
     # Load calibration data

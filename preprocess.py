@@ -1,3 +1,7 @@
+#This script handles image preprocessing for fisheye camera footage. 
+#It includes functions to undistort images using previously computed calibration parameters, resize frames for recognition and display, and rescale coordinates between different resolutions. 
+#The load_calibration_data function retrieves the camera matrix and distortion coefficients from a saved .npz file. 
+
 import cv2
 import numpy as np
 
